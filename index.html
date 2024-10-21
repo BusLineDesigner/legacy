@@ -91,7 +91,7 @@
                                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                             </div>
                             <div class="modal-body">
-                                <div class="mb-3">
+                                <div class="mb-3" v-if="modalLineSearch.dataSource != 'ChinaRailway'">
                                     <label class="col-form-label">线路名称:</label>
                                     <input type="text" class="form-control" autocomplete="off" placeholder="填写线路完整名称" v-model.trim="modalLineSearch.lineName" />
                                 </div>
@@ -117,20 +117,30 @@
                                         <option v-for="(city, index) in regions[modalLineSearch.chelaile.province].cities" :value="city">{{ city.name }}</option>
                                     </select>
                                 </div>
+                                <div class="mb-3" v-if="modalLineSearch.dataSource == 'ChinaRailway'">
+                                    <label class="col-form-label">车次号:</label>
+                                    <input type="text" class="form-control" autocomplete="off" placeholder="填写完整车次号" v-model.trim="modalLineSearch.chinaRailway.trainCode" />
+                                </div>
+                                <div class="mb-3" v-if="modalLineSearch.dataSource == 'ChinaRailway'">
+                                    <label class="col-form-label">日期:</label>
+                                    <input type="text" class="form-control" autocomplete="off" placeholder="YYYYMMDD" v-model.trim="modalLineSearch.chinaRailway.date" />
+                                </div>
                                 <div class="mb-3">
                                     <label class="col-form-label">数据源:</label>
                                     <select class="form-select" v-model="modalLineSearch.dataSource">
                                         <option selected value="AMap">高德地图</option>
-                                        <option value="chelaile" disabled>车来了 (暂不支持)</option>
+                                        <option value="chelaile">车来了</option>
+                                        <option value="ChinaRailway">中国铁路 12306</option>
                                         <option disabled value="BMap">未来可能会添加更多数据源…</option>
                                         <option disabled value="CMap">如有相关数据源推荐，可以联系 BobLiu</option>
                                         <option disabled value="DMap">不过腾讯地图和百度地图估计没希望了</option>
                                     </select>
                                 </div>
+                                <span v-if="modalLineSearch.dataSource != 'AMap'">* 请自行解决 CORS 跨域问题</span>
                             </div>
                             <div class="modal-footer">
                                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">取消</button>
-                                <button type="button" id="modalLineSearchOKAdvanced" class="btn btn-outline-primary" @click="loadLineFromRealitySearch(true)" data-bs-dismiss="modal">高级搜索</button>
+                                <button type="button" id="modalLineSearchOKAdvanced" class="btn btn-outline-primary" :disabled="modalLineSearch.dataSource == 'ChinaRailway'" @click="loadLineFromRealitySearch(true)" data-bs-dismiss="modal">高级搜索</button>
                                 <button type="button" id="modalLineSearchOK" class="btn btn-primary" @click="loadLineFromRealitySearch(false)" data-bs-dismiss="modal">读取</button>
                             </div>
                         </div>

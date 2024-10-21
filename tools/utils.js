@@ -8,15 +8,20 @@ function downloadFile(filename, text, mime, constructBlob = true) {
     pom.click();
 }
 
-function getContents(url, callback){
+function getContents(url, callback, type, contentType, data){
     var xhr = new XMLHttpRequest();
     xhr.onreadystatechange = function(){
         if(xhr.readyState == 4 && xhr.status == 200){
             callback(xhr.responseText);
         }
     }
-    xhr.open("GET", url);
-    xhr.send();
+    xhr.open(type ?? "GET", url);
+    if(type == "POST"){
+        xhr.setRequestHeader("Content-Type", contentType);
+        xhr.send(data);
+    }else{
+        xhr.send();
+    }
 }
 
 function transformlng(lng, lat) {
