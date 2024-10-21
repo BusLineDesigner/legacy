@@ -258,6 +258,10 @@ const bld = Vue.createApp({
                     province: '',
                     city: '',
                 },
+                chinaRailway: {
+                    trainCode: '',
+                    date: new Date().getFullYear().toString() + (new Date().getMonth() + 1).toString().padStart(2, '0') + new Date().getDate().toString().padStart(2, '0'),
+                },
                 advanced: null,
                 CitiesLoadingPrompt: '正在加载列表…'
             },
@@ -271,7 +275,9 @@ const bld = Vue.createApp({
                 autohide: true
             },
             regions: {},
-            chelaileTempData: {}
+            chelaileTempData: {},
+            crTempData: {},
+            showUpYun: false,
         }
     },
     mounted() {
@@ -320,10 +326,16 @@ const bld = Vue.createApp({
             };
 
             this.showMessage(["正在使用自定义 Key", "", "如果加载地图出现问题，请检查设置中的自定义 Key 选项", false]);
+        } else {
+            this.showMessage(["未设置自定义 Key", "", "大部分功能将不可用。详见 https://mp.weixin.qq.com/s/wAgdE5AkqfMvSTfV3tKjTg", false]);
+        }
+
+        if(window.location.host == 'cdn.buslinedesigner.bobliu.tech'){
+            this.showUpYun = true;
         }
 
         this.$refs.tabStation.mapInit();
-        // getContents("https://chelaile-forward.herokuapp.com/api.php?api=goocity%2Fcity!morecities.action%3Fsign%3D%26s%3Dandroid%26v%3D%26vc%3D245", this.loadRegions);
+        getContents("https://api.chelaile.net.cn/goocity/city!morecities.action?sign=&s=android&v=&vc=245", this.loadRegions);
     },
     methods: {
         setTab(tabId) {
@@ -354,7 +366,7 @@ const bld = Vue.createApp({
             this.showModalConfirm("读取线路", "确定读取线路吗？现有线路内容将丢失，请确保已保存当前线路哦~", this.showModalLineSearch);
         },
         loadLineFromRealitySearch(advanced = false){
-            if(!this.modalLineSearch.lineName){
+            if(!this.modalLineSearch.lineName && this.modalLineSearch.dataSource != "ChinaRailway"){
                 this.showMessage(["读取线路", "", "读取线路失败: 未填写线路名称"]);
                 return;
             }
@@ -372,8 +384,10 @@ const bld = Vue.createApp({
                     this.showMessage(["读取线路", "", "读取线路失败: 没有选择城市", false]);
                 }else{
                     this.modalLineSearch.advanced = advanced;
-                    getContents("https://chelaile-forward.herokuapp.com/cdn.php?api=bus%2Fquery!nSearch.action%3Fsign%3D%26s%3D%26v%3D%26vc%3D245%26cityId%3D" + this.modalLineSearch.chelaile.city.id + "%26key%3D" + encodeURIComponent(encodeURIComponent(this.modalLineSearch.lineName)), this.getLineFromChelaile);
+                    getContents("https://cdn.api.chelaile.net.cn/bus/query!nSearch.action?sign=&s=&v=&vc=245&cityId=" + this.modalLineSearch.chelaile.city.id + "&key=" + encodeURIComponent(this.modalLineSearch.lineName), this.getLineFromChelaile);
                 }
+            }else if(this.modalLineSearch.dataSource == "ChinaRailway"){
+                getContents("https://mobile.12306.cn/wxxcx/alipay/main/travelServiceQrcodeTrainInfo", this.getLineStationsFromChinaRailway, "POST", "application/x-www-form-urlencoded", "startDay=" + this.modalLineSearch.chinaRailway.date + "&trainCode=" + this.modalLineSearch.chinaRailway.trainCode);
             }
         },
         getLineFromAmapAdvanced(status, result){
@@ -499,6 +513,7 @@ const bld = Vue.createApp({
             });
         },
         getLineFromChelaile(searchResult){
+            searchResult = searchResult.match(/^\*\*YGKJ(.*)YGKJ##$/)[1];
             try{
                 searchResult = JSON.parse(searchResult).jsonr;
             }catch(e){this.showMessage(["读取线路", "", "读取线路失败: " + e, false]);}
@@ -528,9 +543,10 @@ const bld = Vue.createApp({
             this.lineFile = deepClone(this.blankLineFile);
             this.lineFile.lineName = lineIntro.name;
             this.lineFile.cityName = this.modalLineSearch.chelaile.city.name;
-            getContents("https://chelaile-forward.herokuapp.com/api.php?api=bus%2Fline!lineDetail.action%3Fsign%3D%26s%3D%26v%3D%26lineName%3D1%26cityId%3D" + this.chelaileTempData.cityId + "%26lineId%3D" + encodeURIComponent(encodeURIComponent(this.chelaileTempData.lineIdUp)), this.getLineFromChelaileUpDetails);
+            getContents("https://api.chelaile.net.cn/bus/line!lineDetail.action?sign=&s=&v=&lineName=1&cityId=" + this.chelaileTempData.cityId + "&lineId=" + encodeURIComponent(this.chelaileTempData.lineIdUp), this.getLineFromChelaileUpDetails);
         },
         getLineFromChelaileUpDetails(data){
+            data = data.match(/^\*\*YGKJ(.*)YGKJ##$/)[1];
             try{
                 data = JSON.parse(data).jsonr;
             }catch(e){this.showMessage(["读取线路", "", "读取线路失败: " + e, false]);}
@@ -550,12 +566,13 @@ const bld = Vue.createApp({
                 this.lineFile.fare.strategy = 'single';
                 this.lineFile.fare.single.price = data.data.line.price.replace('元', '');
             }
-            getContents("https://chelaile-forward.herokuapp.com/api.php?api=" + encodeURIComponent(data.data.jxPath.replace('http://api.chelaile.net.cn/', '')), this.getLineFromChelaileUpRoute);
+            getContents(data.data.jxPath, this.getLineFromChelaileUpRoute);
         },
         getLineFromChelaileUpRoute(data){
+            data = data.match(/^\*\*YGKJ(.*)YGKJ##$/)[1];
             this.setRouteFromChelaile('up', this.chelaileTempData.stationsUp, JSON.parse(data).jsonr.data);
             if(this.chelaileTempData.lineIdDown){
-                getContents("https://chelaile-forward.herokuapp.com/api.php?api=bus%2Fline!lineDetail.action%3Fsign%3D%26s%3D%26v%3D%26lineName%3D1%26cityId%3D" + this.chelaileTempData.cityId + "%26lineId%3D" + encodeURIComponent(encodeURIComponent(this.chelaileTempData.lineIdDown)), this.getLineFromChelaileDownDetails);
+                getContents("https://api.chelaile.net.cn/bus/line!lineDetail.action?sign=&s=&v=&lineName=1&cityId=" + this.chelaileTempData.cityId + "&lineId=" + encodeURIComponent(this.chelaileTempData.lineIdDown), this.getLineFromChelaileDownDetails);
             }
             else{
                 this.loadLine();
@@ -563,14 +580,16 @@ const bld = Vue.createApp({
             }
         },
         getLineFromChelaileDownDetails(data){
+            data = data.match(/^\*\*YGKJ(.*)YGKJ##$/)[1];
             try{
                 data = JSON.parse(data).jsonr;
             }catch(e){this.showMessage(["读取线路", "", "读取线路失败: " + e, false]);}
             this.chelaileTempData.stationsDown = data.data.stations;
             this.lineFile.serviceTime.down = data.data.line.firstTime + ' ~ ' + data.data.line.lastTime;
-            getContents("https://chelaile-forward.herokuapp.com/api.php?api=" + encodeURIComponent(data.data.jxPath.replace('http://api.chelaile.net.cn/', '')), this.getLineFromChelaileDownRoute);
+            getContents(data.data.jxPath, this.getLineFromChelaileDownRoute);
         },
         getLineFromChelaileDownRoute(data){
+            data = data.match(/^\*\*YGKJ(.*)YGKJ##$/)[1];
             this.setRouteFromChelaile('down', this.chelaileTempData.stationsDown, JSON.parse(data).jsonr.data);
             this.loadLine();
             this.showMessage(["读取线路", "", "读取现有线路内容成功~"]);
@@ -613,6 +632,62 @@ const bld = Vue.createApp({
                 lat: lastStationLngLat[1],
             });
         },
+        getLineStationsFromChinaRailway(result){
+            result = JSON.parse(result).data;
+            let trainCodes = [];
+            let timeTable = [];
+            let formatTime = (time) => {return time.slice(0, 2) + ':' + time.slice(2)};
+            this.lineFile = deepClone(this.blankLineFile);
+            this.crTempData.stations = {};
+            this.lineFile.lineType = 2;
+            this.lineFile.cityName = "中华人民共和国";
+            this.lineFile.company = result.trainDetail.stopTime[0].jiaolu_corporation_code;
+            this.lineFile.fare.strategy = "text";
+            this.lineFile.fare.text.text = "未知";
+            for(let station of result.trainDetail.stopTime){
+                if(!trainCodes.includes(station.stationTrainCode)){
+                    trainCodes.push(station.stationTrainCode);
+                }
+                this.crTempData.stations[station.stationName] = {
+                    name: station.stationName,
+                    lng: station.lon,
+                    lat: station.lat,
+                };
+                timeTable.push(`${station.stationName} ${formatTime(station.arriveTime)}到 ${formatTime(station.startTime)}发${station.dayDifference == '0' ? '' : ` (+${station.dayDifference})`}`);
+            }
+            this.lineFile.lineName = trainCodes.join('/') + '次';
+            this.lineFile.serviceTime.up = timeTable.join('\n');
+            getContents("https://mobile.12306.cn/wxxcx/alipay/main/getTrainMapLine", this.getLinePathFromChinaRailway, "POST", "application/x-www-form-urlencoded", "startDay=" + this.modalLineSearch.chinaRailway.date + "&trainCode=" + this.modalLineSearch.chinaRailway.trainCode + "&version=v2");
+        },
+        getLinePathFromChinaRailway(result){
+            result = JSON.parse(result).data;
+            for(var section in result){
+                if(this.crTempData.stations[section.split('-')[0]]){
+                    this.lineFile.route.up.push({
+                        type: 'station',
+                        name: this.crTempData.stations[section.split('-')[0]].name,
+                        lng: parseFloat(this.crTempData.stations[section.split('-')[0]].lng),
+                        lat: parseFloat(this.crTempData.stations[section.split('-')[0]].lat),
+                    });
+                }
+                for(let waypoint of result[section].line){
+                    this.lineFile.route.up.push({
+                        type: 'waypoint',
+                        name: '途经点 #' + Math.abs(CRC32C.str('(' + waypoint[0] + ',' + waypoint[1] + ')')).toString(16).toUpperCase(),
+                        lng: waypoint[0],
+                        lat: waypoint[1],
+                    });
+                }
+            }
+            this.lineFile.route.up.push({
+                type: 'station',
+                name: this.crTempData.stations[section.split('-')[1]].name,
+                lng: parseFloat(this.crTempData.stations[section.split('-')[1]].lng),
+                lat: parseFloat(this.crTempData.stations[section.split('-')[1]].lat),
+            });
+            this.loadLine();
+            this.showMessage(["读取线路", "", "读取现有线路内容成功~"]);
+        },
         loadLine(lineFile = null) {
             if(lineFile){
                 this.lineFile = deepClone(lineFile);
@@ -625,6 +700,7 @@ const bld = Vue.createApp({
         },
 
         loadRegions(data){
+            data = data.match(/^\*\*YGKJ(.*)YGKJ##$/)[1];
             try{
                 JSON.parse(data).jsonr.data.cities.forEach(city => {
                     var province = city.cityProvince.replace('省', '');
