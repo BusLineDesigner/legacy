@@ -633,7 +633,11 @@ const bld = Vue.createApp({
             });
         },
         getLineStationsFromChinaRailway(result){
-            result = JSON.parse(result).data;
+            result = JSON.parse(result).data.trainDetail;
+            if(Object.keys(result).length == 0){
+                this.showMessage(["读取线路", "", `读取线路失败：未找到 ${this.modalLineSearch.chinaRailway.date} 车次 ${this.modalLineSearch.chinaRailway.trainCode}`]);
+                return;
+            }
             let trainCodes = [];
             let timeTable = [];
             let formatTime = (time) => {return time.slice(0, 2) + ':' + time.slice(2)};
@@ -641,14 +645,15 @@ const bld = Vue.createApp({
             this.crTempData.stations = {};
             this.lineFile.lineType = 2;
             this.lineFile.cityName = "中华人民共和国";
-            this.lineFile.company = result.trainDetail.stopTime[0].jiaolu_corporation_code;
+            this.lineFile.company = result.stopTime[0].jiaolu_corporation_code;
             this.lineFile.fare.strategy = "text";
             this.lineFile.fare.text.text = "未知";
-            for(let station of result.trainDetail.stopTime){
+            for(let station of result.stopTime){
                 if(!trainCodes.includes(station.stationTrainCode)){
                     trainCodes.push(station.stationTrainCode);
                 }
                 this.crTempData.stations[station.stationName] = {
+                    type: 'station',
                     name: station.stationName,
                     lng: station.lon,
                     lat: station.lat,
@@ -661,13 +666,23 @@ const bld = Vue.createApp({
         },
         getLinePathFromChinaRailway(result){
             result = JSON.parse(result).data;
+            if(Object.keys(result).length == 0){
+                for(let stationName in this.crTempData.stations){
+                    let station = this.crTempData.stations[stationName];
+                    station.name = station.name.replaceAll(" ", "");
+                    this.lineFile.route.up.push(station);
+                }
+                this.loadLine();
+                this.showMessage(["读取线路", "", "车次无具体走向数据，仅获取车站位置"]);
+                return;
+            }
             for(var section in result){
                 if(this.crTempData.stations[section.split('-')[0]]){
                     this.lineFile.route.up.push({
                         type: 'station',
                         name: this.crTempData.stations[section.split('-')[0]].name,
-                        // lng: parseFloat(this.crTempData.stations[section.split('-')[0]].lng),
-                        // lat: parseFloat(this.crTempData.stations[section.split('-')[0]].lat),
+                        lng: parseFloat(this.crTempData.stations[section.split('-')[0]].lng),
+                        lat: parseFloat(this.crTempData.stations[section.split('-')[0]].lat),
                     });
                 }
                 for(let waypoint of result[section].line){
@@ -682,8 +697,8 @@ const bld = Vue.createApp({
             this.lineFile.route.up.push({
                 type: 'station',
                 name: this.crTempData.stations[section.split('-')[1]].name,
-                // lng: parseFloat(this.crTempData.stations[section.split('-')[1]].lng),
-                // lat: parseFloat(this.crTempData.stations[section.split('-')[1]].lat),
+                lng: parseFloat(this.crTempData.stations[section.split('-')[1]].lng),
+                lat: parseFloat(this.crTempData.stations[section.split('-')[1]].lat),
             });
             for(let i in this.lineFile.route.up){
                 node = this.lineFile.route.up[i];
@@ -691,16 +706,14 @@ const bld = Vue.createApp({
                     if(node.name.includes(" ")){
                         node.name = node.name.replaceAll(" ", "");
                     }
-                    if(!node.lng || !node.lat){
-                        let nearbyWaypoint;
-                        if(i == 0){
-                            nearbyWaypoint = this.lineFile.route.up[1];
-                        }else{
-                            nearbyWaypoint = this.lineFile.route.up[i-1];
-                        }
-                        node.lng = nearbyWaypoint.lng;
-                        node.lat = nearbyWaypoint.lat;
+                    let nearbyWaypoint;
+                    if(i == 0){
+                        nearbyWaypoint = this.lineFile.route.up[1];
+                    }else{
+                        nearbyWaypoint = this.lineFile.route.up[i-1];
                     }
+                    node.lng = nearbyWaypoint.lng;
+                    node.lat = nearbyWaypoint.lat;
                 }
             }
             this.loadLine();
