@@ -534,7 +534,7 @@ const bld = Vue.createApp({
                 this.getLineFromChelaileIntro(searchResult.data.result.lines[0]);
             }
         },
-        getLineFromChelaileAdvanced(index){
+        getLineFromChelaileAdvancedSelect(index){
             this.getLineFromChelaileIntro(this.modalLineSearchAdvanced.data[index]);
         },
         getLineFromChelaileIntro(lineIntro){
@@ -666,8 +666,8 @@ const bld = Vue.createApp({
                     this.lineFile.route.up.push({
                         type: 'station',
                         name: this.crTempData.stations[section.split('-')[0]].name,
-                        lng: parseFloat(this.crTempData.stations[section.split('-')[0]].lng),
-                        lat: parseFloat(this.crTempData.stations[section.split('-')[0]].lat),
+                        // lng: parseFloat(this.crTempData.stations[section.split('-')[0]].lng),
+                        // lat: parseFloat(this.crTempData.stations[section.split('-')[0]].lat),
                     });
                 }
                 for(let waypoint of result[section].line){
@@ -682,9 +682,27 @@ const bld = Vue.createApp({
             this.lineFile.route.up.push({
                 type: 'station',
                 name: this.crTempData.stations[section.split('-')[1]].name,
-                lng: parseFloat(this.crTempData.stations[section.split('-')[1]].lng),
-                lat: parseFloat(this.crTempData.stations[section.split('-')[1]].lat),
+                // lng: parseFloat(this.crTempData.stations[section.split('-')[1]].lng),
+                // lat: parseFloat(this.crTempData.stations[section.split('-')[1]].lat),
             });
+            for(let i in this.lineFile.route.up){
+                node = this.lineFile.route.up[i];
+                if(node.type == "station"){
+                    if(node.name.includes(" ")){
+                        node.name = node.name.replaceAll(" ", "");
+                    }
+                    if(!node.lng || !node.lat){
+                        let nearbyWaypoint;
+                        if(i == 0){
+                            nearbyWaypoint = this.lineFile.route.up[1];
+                        }else{
+                            nearbyWaypoint = this.lineFile.route.up[i-1];
+                        }
+                        node.lng = nearbyWaypoint.lng;
+                        node.lat = nearbyWaypoint.lat;
+                    }
+                }
+            }
             this.loadLine();
             this.showMessage(["读取线路", "", "读取现有线路内容成功~"]);
         },
