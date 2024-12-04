@@ -234,7 +234,29 @@ const bld = Vue.createApp({
                             {name: '显示', value: '1'},
                         ]
                     },
-                }
+                },
+                lineMap: {
+                    showLinesByDefault: {
+                        name: '默认展示线路',
+                        current: '1',
+                        default: '1',
+                        type: 'select',
+                        options: [
+                            {name: '展示', value: '1'},
+                            {name: '不展示', value: '0'},
+                        ]
+                    },
+                    showStationsByDefault: {
+                        name: '默认展示站点',
+                        current: '1',
+                        default: '1',
+                        type: 'select',
+                        options: [
+                            {name: '展示', value: '1'},
+                            {name: '不展示', value: '0'},
+                        ]
+                    },
+                },
             },
             announcement: {
                 lastUpdated: Date.parse('2022/12/16 21:30:00'),

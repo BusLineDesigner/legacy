@@ -937,7 +937,7 @@ bld.component('tab-station', {
                 this.line.cityName = result.districtList[0].name;
                 this.map.setCity(result.districtList[0].adcode);
             }else{
-                this.$emit('toast', ['地区错误', '', this.cityName + ' 不是合法的地区…', false]);
+                this.$emit('toast', ['地区错误', '', `无法解析地区 ${this.cityName}…`, false]);
                 this.cityName = this.line.cityName;
             }
         },
@@ -1054,25 +1054,36 @@ bld.component('tab-station', {
                 }
             };
 
+            let showLines = this.settings.lineMap.showLinesByDefault.current === '1';
+            let showStations = this.settings.lineMap.showStationsByDefault.current === '1';
+
             if(lineFile.route.up.length){
+                newLineOnLineMap.config.showLineUp = showLines;
                 newLineOnLineMap.figure.polylineUp = this.generatePolyline(lineFile.route.up, 1, lineFile.lineColor, 13);
                 newLineOnLineMap.figure.polylineUp.on('click', this.clickPolyline, this);
-                this.map.add(newLineOnLineMap.figure.polylineUp);
-                newLineOnLineMap.config.showLineUp = true;
+                if(showLines){
+                    this.map.add(newLineOnLineMap.figure.polylineUp);
+                }
 
+                newLineOnLineMap.config.showStations = showStations;
                 newLineOnLineMap.figure.stationsUp = this.generateMarkers(lineFile.route.up, 15, 1, lineFile.lineColor, 'up', false, false).markers;
-                this.map.add(newLineOnLineMap.figure.stationsUp);
-                newLineOnLineMap.config.showStations = true;
+                if(showStations){
+                    this.map.add(newLineOnLineMap.figure.stationsUp);
+                }
             }
             if((lineFile.lineType % 2) == 1 && lineFile.route.down.length){
+                newLineOnLineMap.config.showLineDown = showLines;
                 newLineOnLineMap.figure.polylineDown = this.generatePolyline(lineFile.route.down, 1, lineFile.lineColor, 12);
                 newLineOnLineMap.figure.polylineDown.on('click', this.clickPolyline, this);
-                this.map.add(newLineOnLineMap.figure.polylineDown);
-                newLineOnLineMap.config.showLineDown = true;
+                if(showLines){
+                    this.map.add(newLineOnLineMap.figure.polylineDown);
+                }
 
+                newLineOnLineMap.config.showStations = showStations;
                 newLineOnLineMap.figure.stationsDown = this.generateMarkers(lineFile.route.down, 15, 1, lineFile.lineColor, 'down', false, false).markers;
-                this.map.add(newLineOnLineMap.figure.stationsDown);
-                newLineOnLineMap.config.showStations = true;
+                if(showStations){
+                    this.map.add(newLineOnLineMap.figure.stationsDown);
+                }
             }
 
             this.mapItems.lineMap.push(newLineOnLineMap);
