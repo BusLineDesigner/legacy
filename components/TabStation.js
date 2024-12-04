@@ -937,7 +937,7 @@ bld.component('tab-station', {
                 this.line.cityName = result.districtList[0].name;
                 this.map.setCity(result.districtList[0].adcode);
             }else{
-                this.$emit('toast', ['地区错误', '', this.cityName + ' 不是合法的地区…', false]);
+                this.$emit('toast', ['地区错误', '', `无法解析地区 ${this.cityName}…`, false]);
                 this.cityName = this.line.cityName;
             }
         },
